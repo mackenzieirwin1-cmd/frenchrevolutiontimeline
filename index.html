@@ -1,0 +1,368 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Revolution Timeline Builder</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@500&family=Public+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: a card pile on the left, one long vertical timeline on the right; on a phone the card panel sticks to the bottom. */
+:root{
+  --bg:#f3f5f9; --surface:#ffffff; --surface-2:#e8ecf4; --ink:#101a33; --muted:#566179; --line:#cdd4e3;
+  --accent:#1f3f9e; --accent-ink:#ffffff; --good:#17703f; --good-bg:#dff3e7; --warn:#8a4f00; --warn-bg:#fff0d4;
+  --c-ineq:#a85a00; --c-idea:#1d5fd1; --c-econ:#0c7a6b; --c-auth:#7a3fc2; --c-trig:#c0392b;
+  --font-display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --font-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --stamp:96px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1424; --surface:#161d33; --surface-2:#1e2745; --ink:#e8ecf7; --muted:#9aa6c2; --line:#2e3858;
+    --accent:#86a8ff; --accent-ink:#0e1424; --good:#6fd09a; --good-bg:#12341f; --warn:#f2b866; --warn-bg:#3a2c12;
+    --c-ineq:#f0b35a; --c-idea:#86b0ff; --c-econ:#5fd6c3; --c-auth:#c9a6ff; --c-trig:#ff9d8f; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1424; --surface:#161d33; --surface-2:#1e2745; --ink:#e8ecf7; --muted:#9aa6c2; --line:#2e3858;
+  --accent:#86a8ff; --accent-ink:#0e1424; --good:#6fd09a; --good-bg:#12341f; --warn:#f2b866; --warn-bg:#3a2c12;
+  --c-ineq:#f0b35a; --c-idea:#86b0ff; --c-econ:#5fd6c3; --c-auth:#c9a6ff; --c-trig:#ff9d8f; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.5;
+  padding-block:20px 28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1080px;margin:0 auto}
+h1,h2,h3{font-family:var(--font-display);margin:0;text-wrap:balance;line-height:1.15}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+header.top h1{font-size:clamp(1.7rem,4vw,2.4rem);font-weight:700;letter-spacing:-.01em}
+header.top p{margin:6px 0 0;color:var(--muted);max-width:56ch}
+.progress{min-width:220px;flex:0 1 280px}
+.progress .lbl{display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted);margin-bottom:6px}
+.progress .lbl b{color:var(--ink);font-variant-numeric:tabular-nums}
+.bar{height:10px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .35s ease}
+
+main.grid{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:24px;align-items:start}
+.side{position:sticky;top:12px;display:flex;flex-direction:column;gap:14px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px}
+.panel h2{font-size:1.05rem;margin-bottom:8px}
+.pile{display:flex;flex-wrap:wrap;gap:8px}
+.card{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:9px 12px;text-align:left;font-weight:500;font-size:.95rem;min-height:44px}
+.card:hover{border-color:var(--accent)}
+.card[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.empty{color:var(--muted);margin:0}
+
+.sel .k{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+.sel h3{font-size:1.25rem;margin-bottom:6px}
+.sel p{margin:0 0 10px}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 14px;font-weight:500;min-height:44px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn:hover{border-color:var(--accent)}
+.clue{background:var(--surface-2);border-radius:8px;padding:10px 12px;margin:0 0 10px;font-size:.95rem}
+.fb{margin:10px 0 0;padding:10px 12px;border-radius:8px;font-size:.95rem}
+.fb.good{background:var(--good-bg);color:var(--good)}
+.fb.warn{background:var(--warn-bg);color:var(--warn)}
+.fb:empty{display:none}
+
+.tlhead{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.tlhead h2{font-size:1.15rem}
+.toggle{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:7px 14px;font-size:.9rem;font-weight:500;min-height:40px}
+.toggle[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.legend{display:none;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.recipe .legend{display:flex}
+
+ol.tl{list-style:none;margin:0;padding:0;position:relative}
+ol.tl::before{content:"";position:absolute;left:calc(var(--stamp) + 11px);top:0;bottom:0;width:2px;background:var(--line)}
+ol.tl>li{display:grid;grid-template-columns:var(--stamp) 24px minmax(0,1fr);column-gap:0;position:relative}
+.stamp{font-family:var(--font-mono);font-size:.74rem;line-height:1.3;color:var(--muted);text-align:right;padding:14px 10px 0 0;text-transform:uppercase;letter-spacing:.02em}
+.dot{width:14px;height:14px;border-radius:50%;background:var(--accent);border:3px solid var(--bg);justify-self:center;margin-top:16px;position:relative;z-index:1;box-sizing:content-box}
+.node .body{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:4px 0 4px 10px}
+.node h3{font-size:1.05rem}
+.node p{margin:4px 0 0;color:var(--muted);font-size:.93rem}
+.node .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.starter{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border:1px dashed var(--line);border-radius:99px;padding:1px 8px}
+.chip{font-size:.78rem;font-weight:700;border-radius:99px;padding:2px 10px;color:var(--c);border:1px solid color-mix(in srgb,var(--c) 55%,transparent);background:color-mix(in srgb,var(--c) 10%,transparent)}
+.recipe .node.has-ing .chip{background:color-mix(in srgb,var(--c) 22%,transparent);font-size:.84rem}
+.recipe .node:not(.has-ing) .body{opacity:.5}
+.ing-ineq{--c:var(--c-ineq)}.ing-idea{--c:var(--c-idea)}.ing-econ{--c:var(--c-econ)}.ing-auth{--c:var(--c-auth)}.ing-trig{--c:var(--c-trig)}
+.node.new .body{animation:pop 1.4s ease-out}
+@keyframes pop{0%{background:var(--good-bg);transform:translateY(6px)}100%{background:var(--surface);transform:none}}
+.node.turning .body{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+
+li.phase .plabel{grid-column:3;font-family:var(--font-mono);font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);padding:14px 0 2px 10px;font-weight:500}
+li.gap .gapbtn{grid-column:3;display:none;margin:2px 0 2px 10px;border:2px dashed var(--accent);background:transparent;color:var(--accent);border-radius:10px;padding:8px 12px;font-weight:700;font-size:.9rem;min-height:44px;text-align:left}
+li.gap .gapbtn:hover{background:var(--surface-2)}
+li.gap{min-height:10px}
+.picking li.gap .gapbtn{display:block}
+
+.done{margin-top:20px}
+.done h2{font-size:1.25rem;margin-bottom:6px}
+.done p{margin:0 0 10px}
+.tp{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.tp button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 12px;font-size:.9rem;min-height:44px}
+.tp button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+textarea{width:100%;min-height:90px;border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--bg);color:var(--ink);font:inherit;resize:vertical}
+label{font-weight:700;display:block;margin-bottom:6px}
+
+@media (max-width:860px){
+  main.grid{grid-template-columns:minmax(0,1fr)}
+  .side{position:static}
+  :root{--stamp:74px}
+  .stamp{font-size:.66rem;padding-right:8px}
+  .sel{position:sticky;bottom:0;z-index:20;max-height:46vh;overflow:auto;box-shadow:0 -6px 18px rgba(0,0,0,.18)}
+  body{padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))}
+}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}.node.new .body{animation:none}}
+</style>
+
+<div class="wrap" id="app">
+  <header class="top">
+    <div>
+      <h1>Build the French Revolution timeline</h1>
+      <p>Pick an event card, read what happened, and place it where you think it belongs. Three starter events are already on the timeline. Dates appear when you place a card correctly.</p>
+    </div>
+    <div class="progress" aria-live="polite">
+      <div class="lbl"><span>On the timeline</span><b id="count">3 of 20</b></div>
+      <div class="bar"><i id="barfill"></i></div>
+    </div>
+  </header>
+
+  <main class="grid" id="grid">
+    <section class="side">
+      <div class="panel sel" id="sel" aria-live="polite"></div>
+      <div class="panel">
+        <h2>Event cards</h2>
+        <div class="pile" id="pile"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="tlhead">
+        <h2>Our timeline</h2>
+        <button class="toggle" id="recipeBtn" aria-pressed="false">Show recipe ingredients</button>
+      </div>
+      <div class="legend" id="legend">
+        <span class="chip ing-ineq">Inequality</span><span class="chip ing-idea">Circulating ideas</span><span class="chip ing-econ">Economic crisis</span><span class="chip ing-auth">Weak or unfair authority</span><span class="chip ing-trig">Trigger event</span>
+      </div>
+      <ol class="tl" id="tl"></ol>
+
+      <div class="panel done" id="done" hidden>
+        <h2>Timeline complete</h2>
+        <p>You placed all 20 events. Look at how the story moves from a money problem, to an uprising, to a republic, to the Terror, to an emperor. Then think about the whole story.</p>
+        <p><b>Which event was the biggest turning point?</b> Tap one to mark it on the timeline.</p>
+        <div class="tp" id="tp"></div>
+        <div class="btns" style="margin-top:12px"><button class="btn" id="reset">Start over</button></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  var ING={ineq:"Inequality",idea:"Circulating ideas",econ:"Economic crisis",auth:"Weak or unfair authority",trig:"Trigger event"};
+  var PHASES={pre:"Road to revolution",na:"National Assembly",la:"Legislative Assembly",conv:"Convention",dir:"Directory",nap:"Napoleon"};
+  // Listed in true chronological order. The array index is the correct position.
+  var EVENTS=[
+    {id:"versailles",when:"1680s",title:"Louis XIV builds Versailles",phase:"pre",ing:"auth",
+     blurb:"Known as the Sun King, Louis XIV ruled with absolute power. He built the huge, expensive palace of Versailles, and his spending began France's deficit.",
+     clue:"Think way back, long before anyone talked about a revolution.",
+     why:"One king held all the power, and his spending left France in debt."},
+    {id:"enlight",when:"Mid-1700s",title:"Enlightenment thinkers question the king",phase:"pre",ing:"idea",
+     blurb:"Thinkers called philosophes used reason and logic to question the divine right of kings and unfair government.",
+     clue:"New ideas had to spread before people would act on them.",
+     why:"People began to ask if rulers should be questioned."},
+    {id:"bankrupt",when:"1780s",title:"France is bankrupt",phase:"pre",ing:"econ",
+     blurb:"Expensive wars, including helping the American Revolution, and royal spending left France deep in debt. The privileged classes refused to be taxed.",
+     clue:"The money problems build up before anyone calls a big meeting.",
+     why:"The government could not pay its bills."},
+    {id:"egcalled",when:"Winter 1788–89",title:"Louis XVI calls the Estates-General",phase:"pre",ing:"trig",
+     blurb:"To deal with the deficit, the king called a meeting of all three estates. It had not met for about 150 years.",
+     clue:"The king needs help with money. The meeting is called before it actually happens.",
+     why:"The king opened the door to change."},
+    {id:"deadlock",when:"May 1789",title:"The Estates-General is deadlocked",phase:"pre",ing:"ineq",
+     blurb:"Each estate had one vote. The First and Second Estates could team up against the Third Estate, which wanted voting by population.",
+     clue:"They have gathered, but they cannot agree on how to vote.",
+     why:"The unfair voting system showed the Third Estate it had little power."},
+    {id:"tennis",when:"June 1789",title:"The Tennis Court Oath",phase:"pre",ing:"trig",
+     blurb:"The Third Estate promised not to separate until France had a constitution.",
+     clue:"This comes after the deadlock, but before the people of Paris take action.",
+     why:"The Third Estate took power into its own hands."},
+    {id:"bastille",when:"July 14, 1789",title:"The Bastille is stormed",phase:"na",ing:"trig",anchor:true,
+     blurb:"News reached Paris that the king planned to use military force against the National Assembly. Parisians stormed the Bastille to seize weapons.",
+     clue:"",why:"Ordinary people took action, and the uprising spread."},
+    {id:"declaration",when:"August 1789",title:"Declaration of the Rights of Man",phase:"na",
+     blurb:"The National Assembly promised rights like freedom of religion, speech and press, and a fair trial. Olympe de Gouges soon argued that women should be included too.",
+     clue:"The Assembly writes new rules after the Bastille, and before the royal family is forced to move.",
+     why:"New ideas became promises, but women were left out."},
+    {id:"women",when:"October 1789",title:"Women march on Versailles",phase:"na",
+     blurb:"A group of women attacked Versailles and forced the royal family to move to Paris, where they became virtual prisoners.",
+     clue:"The royal family is still living at Versailles until this happens.",
+     why:"The king and the National Assembly were now in Paris."},
+    {id:"flight",when:"June 1791",title:"The royal family is caught fleeing",phase:"na",
+     blurb:"The royal family sought help from Austria and was caught trying to escape the country.",
+     clue:"The king is not yet gone, but he is looking for a way out of France.",
+     why:"Many people stopped trusting the king."},
+    {id:"constitution",when:"September 1791",title:"The Constitution of 1791",phase:"na",
+     blurb:"France became a limited monarchy. Feudalism was abolished, but voting was limited to taxpayers.",
+     clue:"The king is still king, but with limits on his power.",
+     why:"France had its first written constitution, but not everyone could vote."},
+    {id:"invasion",when:"1792",title:"Austria and Prussia invade France",phase:"la",
+     blurb:"European monarchs feared the revolution would spread. Austrian and Prussian troops invaded, and the Commune took control of Paris.",
+     clue:"Other kings are nervous. They respond to the revolution in France.",
+     why:"The revolution faced enemies at home and abroad."},
+    {id:"convention",when:"Sept 22, 1792",title:"The Convention creates the First French Republic",phase:"conv",
+     blurb:"The Convention met for the first time. It abolished the monarchy and set up a republic.",
+     clue:"After this, France has no king.",
+     why:"For the first time, France was a republic."},
+    {id:"louis",when:"Jan 21, 1793",title:"Louis XVI is guillotined",phase:"conv",anchor:true,
+     blurb:"The Convention put the royal couple on trial for treason. As long as they lived, the monarchy could be restored.",
+     clue:"",why:"The king was dead, and there was no turning back."},
+    {id:"terror",when:"Sept 1793 – July 1794",title:"The Reign of Terror",phase:"conv",
+     blurb:"The Committee of Public Safety tried people accused of treason. About 15,000 people died on the guillotine.",
+     clue:"The king is gone, and now the revolution turns on people it sees as enemies.",
+     why:"Fear and violence replaced the promise of freedom."},
+    {id:"robespierre",when:"July 1794",title:"Robespierre is sent to the guillotine",phase:"conv",
+     blurb:"The Convention blamed Robespierre for the Terror. He and other Committee members were guillotined, and the Terror ended.",
+     clue:"The Terror ends when the person leading it is blamed for it.",
+     why:"The Terror ended, but the revolution had lost its way."},
+    {id:"directory",when:"1795",title:"The Directory takes over",phase:"dir",
+     blurb:"A new constitution created the Directory, run by five directors. It was weak, corrupt and unpopular.",
+     clue:"The Terror is over, and the new government is run by a group, not a king.",
+     why:"France got a government that few people trusted."},
+    {id:"coup",when:"Nov 1799",title:"Napoleon takes power in a coup",phase:"nap",
+     blurb:"Napoleon Bonaparte, a popular general, overthrew the Directory in a coup d'état and became First Consul.",
+     clue:"A general takes advantage of an unpopular government.",
+     why:"Many people welcomed order after years of chaos."},
+    {id:"emperor",when:"1804",title:"Napoleon crowns himself Emperor",phase:"nap",anchor:true,
+     blurb:"Napoleon took the crown from the Pope and placed it on his own head. France had executed a king, and now had an emperor.",
+     clue:"",why:"One ruler held all the power again."},
+    {id:"waterloo",when:"1815",title:"Napoleon is defeated at Waterloo",phase:"nap",
+     blurb:"Napoleon escaped exile for the Hundred Days, but was defeated at Waterloo and sent to St. Helena. Louis XVIII became king.",
+     clue:"This is the last big event, when Napoleon's rule is over.",
+     why:"Napoleon's rule ended, but the ideas of the revolution lasted."}
+  ];
+  var TOTAL=EVENTS.length;
+  var byId={},i;
+  for(i=0;i<EVENTS.length;i++){EVENTS[i].order=i;byId[EVENTS[i].id]=EVENTS[i];}
+
+  var S;
+  function shuffle(a){a=a.slice();for(var k=a.length-1;k>0;k--){var r=Math.floor(Math.random()*(k+1));var t=a[k];a[k]=a[r];a[r]=t;}return a;}
+  function init(){
+    var placed=[],deck=[];
+    EVENTS.forEach(function(e){(e.anchor?placed:deck).push(e.id);});
+    S={placed:placed,deck:shuffle(deck),sel:null,msg:null,tries:{},clue:{},recipe:false,turning:null,last:null};
+  }
+
+  var $=function(id){return document.getElementById(id);};
+  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+  function renderPile(){
+    var p=$("pile");
+    if(!S.deck.length){p.innerHTML='<p class="empty">All cards are on the timeline.</p>';return;}
+    p.innerHTML=S.deck.map(function(id){
+      return '<button class="card" data-act="pick" data-id="'+id+'" aria-pressed="'+(S.sel===id)+'">'+esc(byId[id].title)+'</button>';
+    }).join("");
+  }
+  function renderSel(){
+    var el=$("sel"),h="";
+    var fb=S.msg?'<p class="fb '+S.msg.type+'">'+esc(S.msg.text)+'</p>':'';
+    if(S.sel){
+      var e=byId[S.sel];
+      h+='<p class="k">Selected card</p><h3>'+esc(e.title)+'</h3><p>'+esc(e.blurb)+'</p>';
+      if(S.clue[e.id]) h+='<p class="clue"><b>Clue:</b> '+esc(e.clue)+'</p>';
+      h+='<div class="btns">';
+      if(!S.clue[e.id]) h+='<button class="btn" data-act="clue">Give me a clue</button>';
+      h+='<button class="btn" data-act="cancel">Put it back</button></div>';
+      h+='<p class="k" style="margin-top:12px">Now tap a dashed "Place here" box on the timeline.</p>'+fb;
+    } else if(!S.deck.length){
+      h+='<p class="k">All done</p><h3>Every event is placed.</h3>'+fb;
+    } else {
+      h+='<p class="k">Start here</p><h3>Pick a card from the pile</h3><p>Read what happened. Then decide where it fits on the timeline.</p>'+fb;
+    }
+    el.innerHTML=h;
+  }
+  function renderTimeline(){
+    var tl=$("tl"),h="",prevPhase=null,picking=!!S.sel;
+    var n=S.placed.length;
+    function gap(j){
+      var before=j>0?byId[S.placed[j-1]].title:null, after=j<n?byId[S.placed[j]].title:null;
+      var label=before&&after?'Place between "'+before+'" and "'+after+'"':(after?'Place before "'+after+'"':'Place after "'+before+'"');
+      return '<li class="gap"><button class="gapbtn" data-act="place" data-j="'+j+'" aria-label="'+esc(label)+'">+ Place here</button></li>';
+    }
+    h+=gap(0);
+    S.placed.forEach(function(id,j){
+      var e=byId[id];
+      if(e.phase!==prevPhase){h+='<li class="phase" aria-hidden="true"><span class="plabel">'+PHASES[e.phase]+'</span></li>';prevPhase=e.phase;}
+      var cls="node"+(e.ing?" has-ing ing-"+e.ing:"")+(S.last===id?" new":"")+(S.turning===id?" turning":"");
+      h+='<li class="'+cls+'" id="ev-'+id+'"><div class="stamp">'+esc(e.when)+'</div><div class="dot"></div><div class="body"><h3>'+esc(e.title)+'</h3><p>'+esc(e.why)+'</p><div class="tags">'+
+        (e.anchor?'<span class="starter">Starter</span>':'')+(e.ing?'<span class="chip">'+ING[e.ing]+'</span>':'')+(S.turning===id?'<span class="chip" style="--c:var(--accent)">Turning point</span>':'')+'</div></div></li>';
+      h+=gap(j+1);
+    });
+    tl.innerHTML=h;
+    tl.parentNode.parentNode.classList.toggle("picking",picking);
+    $("grid").classList.toggle("recipe",S.recipe);
+  }
+  function renderProgress(){
+    $("count").textContent=S.placed.length+" of "+TOTAL;
+    $("barfill").style.width=(S.placed.length/TOTAL*100)+"%";
+  }
+  function renderDone(){
+    var d=$("done"),complete=S.placed.length===TOTAL;
+    d.hidden=!complete;
+    if(!complete)return;
+    $("tp").innerHTML=EVENTS.map(function(e){
+      return '<button data-act="turn" data-id="'+e.id+'" aria-pressed="'+(S.turning===e.id)+'">'+esc(e.title)+'</button>';
+    }).join("");
+  }
+  function renderAll(){renderPile();renderSel();renderTimeline();renderProgress();renderDone();
+    $("recipeBtn").setAttribute("aria-pressed",String(S.recipe));
+    $("recipeBtn").textContent=S.recipe?"Hide recipe ingredients":"Show recipe ingredients";
+  }
+
+  function tryPlace(j){
+    var e=byId[S.sel],n=S.placed.length;
+    var prev=j>0?byId[S.placed[j-1]]:null,next=j<n?byId[S.placed[j]]:null;
+    var ok=(!prev||prev.order<e.order)&&(!next||e.order<next.order);
+    if(ok){
+      S.placed.splice(j,0,e.id);
+      S.deck=S.deck.filter(function(x){return x!==e.id;});
+      S.sel=null;S.last=e.id;
+      S.msg={type:"good",text:"Yes, that fits. "+e.title+" happened in "+e.when+"."};
+      renderAll();
+      var node=$("ev-"+e.id);
+      if(node&&node.scrollIntoView){
+        var rm=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        node.scrollIntoView({block:"center",behavior:rm?"auto":"smooth"});
+      }
+    } else {
+      S.tries[e.id]=(S.tries[e.id]||0)+1;
+      var t;
+      if(prev&&prev.order>e.order) t='Not quite. This happened before "'+prev.title+'".';
+      else t='Not quite. This happened after "'+next.title+'".';
+      if(S.tries[e.id]>=2&&!S.clue[e.id]) t+=' Stuck? Tap "Give me a clue".';
+      S.msg={type:"warn",text:t};
+      renderSel();
+    }
+  }
+
+  document.addEventListener("click",function(ev){
+    var b=ev.target.closest("[data-act]");if(!b)return;
+    var a=b.getAttribute("data-act");
+    if(a==="pick"){var id=b.getAttribute("data-id");S.sel=(S.sel===id)?null:id;S.msg=null;S.last=null;renderPile();renderSel();renderTimeline();}
+    else if(a==="cancel"){S.sel=null;S.msg=null;renderPile();renderSel();renderTimeline();}
+    else if(a==="clue"){S.clue[S.sel]=true;renderSel();}
+    else if(a==="place"){if(S.sel)tryPlace(parseInt(b.getAttribute("data-j"),10));}
+    else if(a==="turn"){var t=b.getAttribute("data-id");S.turning=(S.turning===t)?null:t;renderDone();renderTimeline();}
+  });
+  $("recipeBtn").addEventListener("click",function(){S.recipe=!S.recipe;S.last=null;renderAll();});
+  $("reset").addEventListener("click",function(){init();renderAll();window.scrollTo(0,0);});
+
+  init();renderAll();
+})();
+</script>
+
+</body></html>
